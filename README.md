@@ -9,23 +9,32 @@
 > ⚠️ **本项目是非官方的社区安卓封装，与上游 [March7thAssistant](https://github.com/moesnow/March7thAssistant) 项目及其作者没有隶属关系。**
 > 应用显示名称与上游相同，但它只做**打包 + 图形化**，不修改任何自动化逻辑。
 > 自动化逻辑本身的问题请反馈给上游；**安装、部署、界面相关的问题请反馈到本仓库(如果有精力我也会尝试打个补丁）**。
-> **上游原仓库已声明废弃并迁移到 `March7thAssistantAndroidlocal`。本仓库是在其代码基础上继续维护的分支，当前版本 `1.0.0`。**
+> **上游原仓库已声明废弃并迁移到 `March7thAssistantAndroidlocal`。本仓库是在其代码基础上继续维护的分支，当前版本 `1.0.4`，APK 见 [Releases](https://github.com/1551265800/m7a-android/releases/latest)。**
 [![Release](https://img.shields.io/github/v/release/1551265800/m7a-android?style=flat-square&label=Release)](https://github.com/1551265800/m7a-android/releases/latest)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Android-7.0%2B-3ddc84?style=flat-square&logo=android)](https://www.android.com/)
 
-[功能](#功能) · [快速开始](#快速开始) · [常见问题](#常见问题) · [构建](#从源码构建) · [许可证](#许可证与致谢)
+[功能](#功能) · [快速开始](#快速开始) · [常见问题](#常见问题) · [构建](#从源码构建) · [更新日志](CHANGELOG.md) · [许可证](#许可证与致谢)
 
 </div>
 
 ---
 
-## 本仓库说明（二次开发）
+## 本仓库的改动
 
 本仓库基于 [biirekha857-star/March7thAssistant-for-Android](https://github.com/biirekha857-star/March7thAssistant-for-Android)（AGPL-3.0）修改而来。
-**上游的 Git 历史未保留，本仓库从一次初始提交开始**；原作者与许可证信息见 [`LICENSE`](LICENSE) 与 [`THIRD-PARTY.md`](THIRD-PARTY.md)。
+**上游的 Git 历史未保留，本仓库从一次初始提交开始**；原作者与许可证信息见 [`LICENSE`](LICENSE) 与 [`THIRD-PARTY.md`](THIRD-PARTY.md)，逐版明细见 [CHANGELOG.md](CHANGELOG.md)。
 
-相对上游的改动：
+### 功能改动
+
+| 版本 | 改动 |
+|---|---|
+| 1.0.1 | 修复「后台扫码成功后仍显示旧二维码」；新增清体力副本选择（类型 / 关卡 / 次数） |
+| 1.0.2 | 补上「自动战斗 + 二倍速」；任务选择与任务设置合并为单页 |
+| 1.0.3 | 兑换码任务默认关闭；首页去掉「测试版」标识 |
+| 1.0.4 | 任务选择可折叠；操作区重排；界面图形化；新增历战余响关卡与 100 条上游关卡说明；开关说明精简 |
+
+### 工程改动
 
 - 工程路径改为纯英文目录（AGP 9 在配置阶段会直接拒绝含非 ASCII 字符的工程路径）
 - `scripts/*.py` 的输出路径改为按脚本位置推导，不再写死作者的 `D:\MaaTermux`
@@ -36,7 +45,7 @@
 
 > 本仓库**不含**两个运行时资产（bootstrap 约 40MB + rootfs 约 526MB），
 > 需按「[从源码构建](#从源码构建)」一节自行生成；生成后 `app/src/main/assets/` 下才会出现这两个文件，
-> 否则打出来的 APK 是空壳，装上去点「开始部署」必然失败。
+> 否则打出来的 APK 是空壳，装上去点「开始部署」必然失败。只想用的话直接下 [Releases](https://github.com/1551265800/m7a-android/releases/latest) 里打好包的 APK 即可。
 
 ---
 
@@ -79,20 +88,36 @@
 ### 📱 扫码登录
 March7thAssistant 首次运行需要扫码。二维码由 App 从容器里取回并**直接显示在界面上**，点一下可全屏放大，用「米游社」App 扫即可。二维码会自动刷新，登录态保存在容器内，**之后不用再扫**。
 
-### ▶️ 一键运行任务
-预置常用任务：完整运行 / 例行任务 / 每日实训 / 清体力 / 货币战争 / 差分宇宙 / 模拟宇宙（由于官方限制，模拟宇宙（暂知）无法使用，会显示仅支持Windows,后续会尽可能尝试通过打补丁解决） / 忘却之庭 / 虚构叙事 / 末日幻影 / 游戏更新 / 测试推送 / 任务列表。
+### ▶️ 选择任务并运行
+「任务」页列出全部可用任务：完整运行 / 例行任务 / 每日实训 / 清体力 / 货币战争 / 差分宇宙 / 忘却之庭 / 虚构叙事 / 末日幻影 / 游戏更新 / 测试推送 ……
+默认收成一张卡片，点开再选，选完自动收起；卡片标题就是当前任务，运行按钮上也会显示任务名。
 
-### 🎛️ 任务开关（28 项）##实验功能稳定性未知
-不想让「完整运行」每次都跑全部内容？设置页可按组开关：
+> 模拟宇宙受上游限制，目前会提示「仅支持 Windows」。
 
-- **领取奖励** — 总开关、委托、邮件、支援、每日实训、无名勋礼、兑换码、成就、短信
-- **日常任务** — 总开关、合成材料、姬子试用、回忆一
-- **活动** — 活动总开关、每日签到
-- **清体力** — 总开关、历战余响、后备开拓力、燃料、合成沉浸器、支援角色、自动切队伍
-- **自动剧情与战斗** — 跳过对话、选择选项、自动战斗检测、处理短信页
-- **运行行为** — 检查更新、成功后暂停、失败后退出
+### 🎛️ 任务开关（42 项）
+不想让「完整运行」每次都跑全部内容？「任务」页的「任务设置」按组折叠，组标题显示已启用数量：
+
+- **清体力**（13 项）— 总开关、历战余响、后备开拓力、燃料、合成沉浸器、使用/强制支援、自动切队伍、进本前传送、遗器满包分解、助燃券、计划续刷、保留计划
+- **领取奖励**（9 项）— 总开关、委托、邮件、支援、每日实训、无名勋礼、兑换码、成就、短信
+- **日常任务**（4 项）— 总开关、合成材料、姬子试用、回忆一
+- **活动**（5 项）— 总开关、每日签到、花藏繁生、位面分裂、异器盈界
+- **自动剧情与战斗**（8 项）— 自动战斗 + 二倍速、跳过对话、自动选选项、战斗检测、短信页面、对话总开关、英雄纪、记住状态
+- **运行行为**（3 项）— 检查更新、成功后暂停、失败后退出
 
 > 修改是**增量写入** `config.yaml`，不会覆盖程序记录的时间戳等状态。
+> 点「一键运行」时会自动同步一次；想先确认写入结果，可以点「生成脚本」，日志里会出现「配置已更新（… 字节）」。
+
+### ⚔️ 清体力副本与历战余响
+
+- **副本**：类型（拟造花萼金/赤、凝滞虚影、侵蚀隧洞、饰品提取、历战余响）、具体关卡、连续挑战次数，每种类型分别记住
+- **关卡说明**：列表按上游样式显示「名称（说明）」，例如 `霜风之径（冰套 / 风套）`、`毁灭的开端（末日兽）`，共 100 条，选中后行下方还有一行小字
+- **历战余响**：开关打开后单独选关卡（11 个，默认「毁灭的开端」），每周最多 3 次
+
+### ⚡ 自动战斗与二倍速
+上游的判断条件是 `game_optimization_enable && auto_battle_detect_enable`，两者都为真才生效。
+本应用把前者固定为 `true`（与上游官方安卓版一致），后者做成了开关「自动战斗 + 二倍速」，默认开启。
+
+> 首次启动若还没拿到 UID，上游会跳过写入二倍速（日志里会提示「战斗二倍速将在下次启动时自动配置」），第二次启动才生效，属正常行为。
 
 ### 🖥️ 实时监看画面
 把云游戏的**实时画面**投到手机上，像监视器一样看自动化在做什么。基于 Chrome DevTools Protocol 的 screencast 实现。
@@ -138,7 +163,11 @@ March7thAssistant 首次运行需要扫码。二维码由 App 从容器里取回
 
 ### 1. 安装
 
-从 [Releases](https://github.com/1551265800/m7a-android/releases/latest) 下载 APK 安装。
+从 [Releases](https://github.com/1551265800/m7a-android/releases/latest) 下载 `m7a-android-<版本>-arm64.apk` 直接安装。
+
+- 当前版本 **1.0.4**，APK 约 **579MB**（内置 Termux 运行时 + 离线容器镜像）
+- 只支持 **arm64-v8a 真机**；MuMu 等 x86_64 模拟器装不上，安卓模拟器也跑不了 proot
+- 装过本仓库同签名的旧版可直接覆盖升级；从**别的签名**版本（例如上游作者的包）升级必须先卸载
 
 > ⚠️ **本应用的包名是 `com.m7ahsr`。**
 > 如果你装过包名为 `com.termux` 的早期测试版，两者**不是同一个应用**，
@@ -148,15 +177,16 @@ March7thAssistant 首次运行需要扫码。二维码由 App 从容器里取回
 
 打开 App → **部署** 页 → 点「开始部署」。
 
-全程离线，不需要网络。首次需要约 1–2 分钟释放内置镜像（500MB）。
+全程离线，不需要网络。首次需要约 1–2 分钟释放内置镜像（526MB）。
 
 > 建议先到 **设置 → 后台保活** 申请电池优化白名单，避免任务被系统中途回收。
 
 ### 3. 扫码登录
 
-部署完成后到 **任务** 页点「一键运行 完整运行」。
+部署完成后到 **任务** 页，确认「选择任务」是「完整运行」，再点「操作」区的**一键运行**（按钮上会显示当前任务名）。
 
 首次会走到登录步骤，**二维码会显示在卡片里**，用「米游社」App 扫描即可。
+扫码成功后二维码会自动收起，不会残留上一轮已过期的码。
 
 ### 4. 开始挂机
 
@@ -296,17 +326,39 @@ python scripts/reprefix_bootstrap.py \
 
 | 项 | 版本 |
 |---|---|
-| JDK | 17+ |
-| Android SDK | `compileSdk 37`（`android-37.0`） |
+| JDK | **21**（Temurin 21 实测通过；IDEA 自带的 JBR 是精简运行时，缺 `jlink.exe`，AGP 编译 Java 时会报错） |
+| Android SDK | `compileSdk 37` → `platforms;android-37.2`，另需 `platforms;android-36`（终端模块用） |
 | NDK | `29.0.14206865` |
 | CMake | `3.22.1` |
 | Gradle | 9.6.0（wrapper 已含） |
 | AGP | 9.2.1 |
 
 ```bash
-sdkmanager "ndk;29.0.14206865" "cmake;3.22.1"
+sdkmanager "platforms;android-37.2" "platforms;android-36" \
+           "ndk;29.0.14206865" "cmake;3.22.1" "platform-tools"
 ./gradlew :app:assembleDebug
-# 产物：app/build/outputs/apk/debug/app-debug.apk（约 553MB）
+# 资产就位后约 580MB；缺资产时只有 21MB 空壳，部署必失败
+```
+
+> **Gradle 不读 `http_proxy` 环境变量。** 需要代理时写进 Gradle 用户目录的 `gradle.properties`：
+>
+> ```properties
+> systemProp.http.proxyHost=127.0.0.1
+> systemProp.http.proxyPort=7890
+> systemProp.https.proxyHost=127.0.0.1
+> systemProp.https.proxyPort=7890
+> systemProp.http.nonProxyHosts=localhost|127.0.0.1
+> ```
+>
+> 打包前建议先 `./gradlew --stop`，避免和 IDE 的守护进程抢 `caches/journal-1.lock`（Windows 上会报「拒绝访问」）。
+
+**发布签名**：仓库不含 keystore，`assembleRelease` 默认出未签名包。把 keystore 放到仓库根目录并写 `keystore.properties`（已被 `.gitignore` 排除）：
+
+```properties
+storeFile=m7a-release.jks
+storePassword=你的密码
+keyAlias=m7a
+keyPassword=你的密码
 ```
 
 ### 两个大资产
@@ -323,7 +375,7 @@ sdkmanager "ndk;29.0.14206865" "cmake;3.22.1"
    （若已改包名，用 `scripts/reprefix_bootstrap.py` 处理，不要手工替换）
 4. 重新生成 `SYMLINKS.txt`（zip 存不了软链）并重新打包
 
-**② 离线容器镜像（约 497MB）**
+**② 离线容器镜像（约 526MB）**
 
 ```bash
 # 直连 ghcr.io 在国内会卡住，建议走镜像
@@ -356,6 +408,8 @@ sha256:58341961e8616a33172df0d55455becf85841eb3e6d7625155c91f69423118fa
 - **实时监看依赖 Chromium 的调试端口。** 若浏览器未带 `--remote-debugging-port` 启动则会失败（页面内会给出诊断输出）。
 - **后台保活的最终效果取决于 ROM。** 国产 ROM 的额外限制无法通过 API 绕过，只能引导用户手动放行。
 - **只在少量设备上验证过。** 不同厂商 ROM 对私有目录 `exec`、ptrace 的限制不同，遇到问题欢迎提 Issue 并附上「日志」页的输出。
+- **任务开关只对「完整运行」是全量生效的。** 选「例行任务 / 每日实训 / 清体力」这类单项任务时，只有策略类开关（跳过对话、支援角色、燃料、副本参数……）参与，总开关（如 `power_enable`）不会去「关掉你自己选的任务」——这是上游的设计，不是 bug。
+- **二倍速首次可能不生效。** 上游要拿到账号 UID 才写入战斗速度，首次启动若恰好在登录前，日志会提示「下次启动时自动配置」。
 
 ---
 
@@ -382,7 +436,7 @@ sha256:58341961e8616a33172df0d55455becf85841eb3e6d7625155c91f69423118fa
 
 ### 关于内置镜像
 
-APK 内置的 497MB 离线镜像是对上游容器镜像
+APK 内置的 526MB 离线镜像是对上游容器镜像
 `ghcr.io/moesnow/march7thassistant:latest`（arm64）的**原样重新打包**，
 其中包含 March7thAssistant 完整源代码、Debian 用户空间、Python 运行时与 Chromium。
 完整源代码可从上游仓库及其镜像获取；构建脚本见本仓库。
