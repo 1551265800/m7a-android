@@ -9,8 +9,8 @@
 > ⚠️ **本项目是非官方的社区安卓封装，与上游 [March7thAssistant](https://github.com/moesnow/March7thAssistant) 项目及其作者没有隶属关系。**
 > 应用显示名称与上游相同，但它只做**打包 + 图形化**，不修改任何自动化逻辑。
 > 自动化逻辑本身的问题请反馈给上游；**安装、部署、界面相关的问题请反馈到本仓库(如果有精力我也会尝试打个补丁）**。
-**此版本已经废弃，请转到新仓库March7thAssistantAndroidlocal，此为更新的方案更新的实现，相对于云端更稳定**
-[![Release](https://img.shields.io/github/v/release/biirekha857-star/March7thAssistant-for-Android?style=flat-square&label=Release)](https://github.com/biirekha857-star/March7thAssistant-for-Android/releases/latest)
+> **上游原仓库已声明废弃并迁移到 `March7thAssistantAndroidlocal`。本仓库是在其代码基础上继续维护的分支，当前版本 `1.0.0`。**
+[![Release](https://img.shields.io/github/v/release/1551265800/m7a-android?style=flat-square&label=Release)](https://github.com/1551265800/m7a-android/releases/latest)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Android-7.0%2B-3ddc84?style=flat-square&logo=android)](https://www.android.com/)
 
@@ -138,7 +138,7 @@ March7thAssistant 首次运行需要扫码。二维码由 App 从容器里取回
 
 ### 1. 安装
 
-从 [Releases](https://github.com/biirekha857-star/March7thAssistant-for-Android/releases/latest) 下载 APK 安装。
+从 [Releases](https://github.com/1551265800/m7a-android/releases/latest) 下载 APK 安装。
 
 > ⚠️ **本应用的包名是 `com.m7ahsr`。**
 > 如果你装过包名为 `com.termux` 的早期测试版，两者**不是同一个应用**，
@@ -350,7 +350,7 @@ sha256:58341961e8616a33172df0d55455becf85841eb3e6d7625155c91f69423118fa
 诚实列一下：
 
 - **仅支持 arm64-v8a。** 内置 bootstrap 与容器镜像是 aarch64 的，其他架构需各自重建资产。
-- **APK 约 553MB。** 内置了 40MB bootstrap + 497MB 离线镜像。不适合 Google Play，适合 GitHub Releases。
+- **APK 约 580MB。** 内置了约 40MB bootstrap + 约 526MB 离线镜像。不适合 Google Play，适合 GitHub Releases。
 - **包名 `com.m7ahsr`。** 想换成别的名字要注意 10 字符上限（见上）。
 - **`targetSdk` 保持 28。** 这是允许从应用私有目录 `exec` 二进制、并沿用旧版 `/sdcard` 存储模型的前提（Termux 上游同样如此）。
 - **实时监看依赖 Chromium 的调试端口。** 若浏览器未带 `--remote-debugging-port` 启动则会失败（页面内会给出诊断输出）。
