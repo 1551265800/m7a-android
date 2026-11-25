@@ -58,8 +58,8 @@ object TaskToggles {
             ToggleGroup.REWARD, true,
         ),
         TaskToggle(
-            "reward_redemption_code_enable", "兑换码", "自动领取兑换码奖励",
-            ToggleGroup.REWARD, true,
+            "reward_redemption_code_enable", "兑换码", "自动领取兑换码奖励（默认关闭）",
+            ToggleGroup.REWARD, false,
         ),
         TaskToggle(
             "reward_achievement_enable", "成就奖励", "领取成就奖励（默认关闭）",
