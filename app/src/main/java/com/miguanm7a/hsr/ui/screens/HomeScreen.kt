@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -37,6 +39,7 @@ import com.miguanm7a.hsr.ui.components.InfoRow
 import com.miguanm7a.hsr.ui.components.LoginQrCard
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.SectionHeader
+import com.miguanm7a.hsr.ui.components.StatusRow
 import com.miguanm7a.hsr.ui.theme.MaaDesignTokens
 import com.miguanm7a.hsr.ui.theme.OkColor
 import com.miguanm7a.hsr.ui.theme.WarnColor
@@ -81,23 +84,32 @@ fun HomeScreen(
 
         // ---------------- 状态卡片 ----------------
         MaaCard {
-            Text("运行状态", style = MaterialTheme.typography.titleMedium)
-            InfoRow(
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.size(6.dp))
+                Text("运行状态", style = MaterialTheme.typography.titleMedium)
+            }
+            StatusRow(
                 "Termux 运行时",
                 if (ui.runtimeReady) "已就绪" else "未安装",
-                valueColor = if (ui.runtimeReady) OkColor else WarnColor,
+                if (ui.runtimeReady) OkColor else WarnColor,
             )
-            InfoRow(
+            StatusRow(
                 "容器",
                 if (ui.deployed) ui.containerAlias else "未部署",
-                valueColor = if (ui.deployed) OkColor else WarnColor,
+                if (ui.deployed) OkColor else WarnColor,
             )
             InfoRow("当前任务", ui.task.label)
             if (ui.runningTask) {
-                InfoRow(
+                StatusRow(
                     "执行中",
                     ui.runningTaskName ?: "任务",
-                    valueColor = MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -126,12 +138,16 @@ fun HomeScreen(
         )
 
         // ---------------- 主操作 ----------------
+        SectionHeader("操作", icon = Icons.Filled.PlayArrow)
+
         if (!ui.runtimeReady || !ui.deployed) {
             Button(
                 onClick = onGoDeploy,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 enabled = !deploy.running,
             ) {
+                Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.size(8.dp))
                 Text("一键部署", style = MaterialTheme.typography.titleMedium)
             }
         }
@@ -146,7 +162,15 @@ fun HomeScreen(
         ) {
             Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
             Spacer(Modifier.size(8.dp))
-            Text("一键运行任务", style = MaterialTheme.typography.titleMedium)
+            // 带上当前任务名，免得首页点了不知道跑哪个
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("一键运行任务", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    ui.task.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                )
+            }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md)) {

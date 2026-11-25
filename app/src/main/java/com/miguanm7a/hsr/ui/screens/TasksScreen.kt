@@ -1,5 +1,6 @@
 package com.miguanm7a.hsr.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,10 +11,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +42,7 @@ import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.components.LoginQrCard
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.ExpandableGroup
+import com.miguanm7a.hsr.ui.components.InstanceNameRow
 import com.miguanm7a.hsr.ui.components.PowerInstanceCard
 import com.miguanm7a.hsr.ui.components.ToggleRow
 import com.miguanm7a.hsr.deploy.InstanceCatalog
@@ -57,6 +63,8 @@ fun TasksScreen(
     val instanceName = ui.instanceName.ifEmpty { InstanceCatalog.defaultName(ui.instanceType) }
     val instanceCount = ui.instanceCount.takeIf { it > 0 }
         ?: InstanceCatalog.defaultCount(ui.instanceType)
+    // 任务选择默认收起，首屏只显示当前选中项，把空间留给下面的任务设置。
+    var taskOpen by rememberSaveable { mutableStateOf(false) }
     var powerOpen by rememberSaveable { mutableStateOf(true) }
     var rewardOpen by rememberSaveable { mutableStateOf(false) }
     var dailyOpen by rememberSaveable { mutableStateOf(false) }
@@ -90,29 +98,41 @@ fun TasksScreen(
             )
         }
 
-        item { SectionHeader("选择任务") }
+        item { SectionHeader("选择任务", icon = Icons.AutoMirrored.Filled.List) }
 
-        items(M7aTask.entries.toList()) { task ->
-            MaaCard(onClick = { vm.setTask(task) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = ui.task == task, onClick = { vm.setTask(task) })
-                    Column(Modifier.weight(1f)) {
-                        Text(task.label, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            taskBrief(task, ui.instanceType, instanceName, instanceCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // 收起时标题即当前任务，展开后在卡片内直接选中；选完自动收起，
+        // 免得整屏被任务列表占满、还要手动收起来才能看到下面的设置。
+        item {
+            ExpandableGroup(
+                title = ui.task.label,
+                summary = taskBrief(ui.task, ui.instanceType, instanceName, instanceCount),
+                expanded = taskOpen,
+                onToggleExpand = { taskOpen = !taskOpen },
+            ) {
+                M7aTask.entries.forEachIndexed { index, task ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.height(1.dp),
                         )
                     }
+                    TaskOptionRow(
+                        task = task,
+                        brief = taskBrief(task, ui.instanceType, instanceName, instanceCount),
+                        selected = ui.task == task,
+                        onSelect = {
+                            vm.setTask(task)
+                            taskOpen = false
+                        },
+                    )
                 }
             }
         }
 
-        item { SectionHeader("任务设置") }
+        item { SectionHeader("任务设置", icon = Icons.Filled.Settings) }
         item {
             Text(
-                "以下设置对所有任务共用；选「完整运行」时，开关决定具体跑哪些环节，" +
-                    "选单项任务时只有策略类开关生效。",
+                "选「完整运行」时按开关执行；单项任务只看策略类开关。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -144,6 +164,18 @@ fun TasksScreen(
                 }
                 TaskToggles.forGroup(ToggleGroup.POWER).forEach { t ->
                     ToggleRow(t, checked = toggles[t.key] ?: t.defaultValue) { v -> vm.setToggle(t.key, v) }
+                    // 历战余响的关卡跟着开关放在一起，不用回上面找副本类型
+                    if (t.key == TaskToggles.ECHO_KEY) {
+                        InstanceNameRow(
+                            label = "历战余响关卡",
+                            type = InstanceCatalog.ECHO,
+                            name = ui.echoInstanceName.ifEmpty {
+                                InstanceCatalog.defaultName(InstanceCatalog.ECHO)
+                            },
+                            onNameChange = { vm.setEchoInstanceName(it) },
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
             }
         }
@@ -194,7 +226,7 @@ fun TasksScreen(
             }
         }
 
-        item { SectionHeader("完成后行为") }
+        item { SectionHeader("完成后行为", icon = Icons.Filled.PowerSettingsNew) }
         item {
             MaaCard {
                 AfterFinish.entries.forEach { af ->
@@ -213,7 +245,7 @@ fun TasksScreen(
             }
         }
 
-        item { SectionHeader("定时运行") }
+        item { SectionHeader("定时运行", icon = Icons.Filled.Schedule) }
         item {
             MaaCard {
                 Text("循环模式", style = MaterialTheme.typography.titleSmall)
@@ -247,8 +279,7 @@ fun TasksScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    "对应 config.yaml 的 loop_mode 与 scheduled_time，" +
-                        "仅在 after_finish = Loop 时循环生效。",
+                    "仅「完成后行为 = 循环等待」时生效",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -260,32 +291,42 @@ fun TasksScreen(
             }
         }
 
-        item { SectionHeader("操作") }
+        item { SectionHeader("操作", icon = Icons.Filled.PlayArrow) }
 
+        // 生成脚本放最上面：把当前设置写进容器。点「一键运行」也会自动做一次，
+        // 单列出来是为了改完设置后能主动确认写入结果。
         item {
-            Button(
-                onClick = { vm.runSelectedTask() },
+            OutlinedButton(
+                onClick = { vm.regenerateScripts() },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = ui.runtimeReady && !ui.runningTask,
-            ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.size(8.dp))
-                Text("一键运行 ${ui.task.label}", style = MaterialTheme.typography.titleMedium)
-            }
+            ) { Text("生成脚本") }
         }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md)) {
                 OutlinedButton(
                     onClick = { vm.stopTask() },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).height(52.dp),
                     enabled = ui.runningTask,
                 ) { Text("停止") }
 
-                OutlinedButton(
-                    onClick = { vm.regenerateScripts() },
-                    modifier = Modifier.weight(1f),
-                ) { Text("生成脚本") }
+                Button(
+                    onClick = { vm.runSelectedTask() },
+                    modifier = Modifier.weight(1.8f).height(52.dp),
+                    enabled = ui.runtimeReady && !ui.runningTask,
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.size(6.dp))
+                    // 任务名单独一行，避免「一键运行 货币战争」在窄屏被截断
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("一键运行", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            ui.task.label,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
         }
 
@@ -315,6 +356,33 @@ fun TasksScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+/** 任务列表里的一行：单选框 + 任务名 + 一句摘要。不用卡片，避免卡片套卡片。 */
+@Composable
+private fun TaskOptionRow(
+    task: M7aTask,
+    brief: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() }
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Column(Modifier.weight(1f).padding(start = 6.dp)) {
+            Text(task.label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                brief,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

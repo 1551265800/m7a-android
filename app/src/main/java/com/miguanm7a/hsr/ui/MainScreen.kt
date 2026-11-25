@@ -87,6 +87,9 @@ fun MainScreen(
                         onThemeModeChange = onThemeModeChange,
                         onAccentChange = onAccentChange,
                         onOpenMonitor = openMonitor,
+                        onGoTasks = {
+                            scope.launch { pagerState.animateScrollToPage(NavTab.TASKS.ordinal) }
+                        },
                     )
                 }
             }

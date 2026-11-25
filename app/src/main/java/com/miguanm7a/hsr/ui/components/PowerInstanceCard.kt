@@ -63,14 +63,18 @@ fun PowerInstanceCard(
     val body: @Composable () -> Unit = {
         Text("清体力副本", style = MaterialTheme.typography.titleSmall)
         Text(
-            "「清体力」和「例行任务 / 完整运行」里的刷本都用这里的选择。",
+            "清体力与完整运行共用这里的设置",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.size(MaaDesignTokens.Spacing.sm))
 
         PickerRow(label = "副本类型", value = type) { typeDialog = true }
-        PickerRow(label = "副本名称", value = name) { nameDialog = true }
+        PickerRow(
+            label = "副本名称",
+            value = name,
+            note = InstanceCatalog.note(type, name),
+        ) { nameDialog = true }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -106,6 +110,7 @@ fun PowerInstanceCard(
             title = "选择副本类型",
             options = InstanceCatalog.TYPES.map { it.name },
             selected = type,
+            labelOf = { it },
             onDismiss = { typeDialog = false },
             onSelect = {
                 typeDialog = false
@@ -118,6 +123,7 @@ fun PowerInstanceCard(
             title = "选择副本（$type）",
             options = InstanceCatalog.names(type),
             selected = name,
+            labelOf = { InstanceCatalog.label(type, it) },
             onDismiss = { nameDialog = false },
             onSelect = {
                 nameDialog = false
@@ -127,28 +133,87 @@ fun PowerInstanceCard(
     }
 }
 
+/**
+ * 单独一行的关卡选择。
+ *
+ * 「历战余响」和主副本类型是两回事：开关打开时上游读的是
+ * `instance_names[历战余响]`，需要独立选关卡，不能复用主副本的选择。
+ */
 @Composable
-private fun PickerRow(label: String, value: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
+fun InstanceNameRow(
+    label: String,
+    type: String,
+    name: String,
+    onNameChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var dialog by remember { mutableStateOf(false) }
+
+    PickerRow(
+        label = label,
+        value = name,
+        modifier = modifier,
+        note = InstanceCatalog.note(type, name),
+        onClick = { dialog = true },
+    )
+
+    if (dialog) {
+        ChoiceDialog(
+            title = "选择关卡（$type）",
+            options = InstanceCatalog.names(type),
+            selected = name,
+            labelOf = { InstanceCatalog.label(type, it) },
+            onDismiss = { dialog = false },
+            onSelect = {
+                dialog = false
+                onNameChange(it)
+            },
+        )
+    }
+}
+
+@Composable
+private fun PickerRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    /** 上游关卡说明（掉落 / 角色 / BOSS），有就在值下面小字显示。 */
+    note: String = "",
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = MaaDesignTokens.Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+            .clickable { onClick() },
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.weight(1f))
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Icon(
-            Icons.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = MaaDesignTokens.Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.weight(1f))
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Icon(
+                Icons.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (note.isNotBlank()) {
+            Text(
+                note,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
+            )
+        }
     }
 }
 
@@ -159,6 +224,8 @@ private fun ChoiceDialog(
     selected: String,
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit,
+    /** 选项显示文本：默认原值，关卡列表传「名称（说明）」。 */
+    labelOf: (String) -> String = { it },
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -175,7 +242,11 @@ private fun ChoiceDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(selected = option == selected, onClick = { onSelect(option) })
-                            Text(option, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                labelOf(option),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }

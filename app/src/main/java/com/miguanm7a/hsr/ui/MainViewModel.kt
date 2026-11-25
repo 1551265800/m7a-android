@@ -56,6 +56,8 @@ data class UiState(
     val instanceType: String = InstanceCatalog.defaultType(),
     val instanceName: String = "",
     val instanceCount: Int = 0,
+    /** 「历战余响」开关单独用的关卡（上游 instance_names['历战余响']）。 */
+    val echoInstanceName: String = "",
     val version: String = "",
 )
 
@@ -175,6 +177,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 instanceType = settings.instanceType(),
                 instanceName = settings.instanceName(settings.instanceType()),
                 instanceCount = settings.challengeCount(settings.instanceType()),
+                echoInstanceName = settings.instanceName(InstanceCatalog.ECHO),
                 version = com.miguanm7a.hsr.BuildConfig.VERSION_NAME,
             )
         }
@@ -452,6 +455,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         refreshInstance()
     }
 
+    /** 历战余响是独立于主副本类型的一项，只改它自己的关卡名。 */
+    fun setEchoInstanceName(name: String) {
+        settings.setInstanceName(InstanceCatalog.ECHO, name)
+        refreshInstance()
+    }
+
     private fun refreshInstance() {
         val type = settings.instanceType()
         _ui.update {
@@ -459,6 +468,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 instanceType = type,
                 instanceName = settings.instanceName(type),
                 instanceCount = settings.challengeCount(type),
+                echoInstanceName = settings.instanceName(InstanceCatalog.ECHO),
             )
         }
     }

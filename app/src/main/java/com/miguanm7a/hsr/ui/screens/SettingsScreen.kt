@@ -12,8 +12,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Monitor
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -30,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,7 +44,9 @@ import com.miguanm7a.hsr.service.KeepAlive
 import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.components.InfoRow
 import com.miguanm7a.hsr.ui.components.MaaCard
+import com.miguanm7a.hsr.ui.components.NavRow
 import com.miguanm7a.hsr.ui.components.SectionHeader
+import com.miguanm7a.hsr.ui.components.StatusRow
 import com.miguanm7a.hsr.termux.TermuxPaths
 import com.miguanm7a.hsr.ui.theme.AccentTheme
 import com.miguanm7a.hsr.ui.theme.ErrColor
@@ -56,6 +63,8 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onAccentChange: (AccentTheme) -> Unit,
     onOpenMonitor: () -> Unit = {},
+    /** 跳到「任务」页：任务开关与清体力副本都在那边。 */
+    onGoTasks: () -> Unit = {},
 ) {
     val ui by vm.ui.collectAsState()
     var showReset by remember { mutableStateOf(false) }
@@ -71,7 +80,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(MaaDesignTokens.Spacing.lg))
         Text("设置", style = MaterialTheme.typography.headlineMedium)
 
-        SectionHeader("容器")
+        SectionHeader("容器", icon = Icons.Filled.Folder)
         MaaCard {
             OutlinedTextField(
                 value = ui.containerAlias,
@@ -87,16 +96,14 @@ fun SettingsScreen(
             )
         }
 
-        SectionHeader("任务")
-        MaaCard {
-            Text("任务设置已合并到「任务」页", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "任务开关、清体力副本、领取奖励等设置现在和任务选择在同一页（「任务」标签 → 任务设置），" +
-                    "按分组折叠，改完直接点运行即可。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        SectionHeader("任务", icon = Icons.AutoMirrored.Filled.List)
+        // 说明改成可点条目：用户看完直接跳过去，不用自己找 tab
+        NavRow(
+            icon = Icons.Filled.Settings,
+            title = "任务开关与副本",
+            subtitle = "任务选择、清体力副本、领取奖励等设置都在「任务」页",
+            onClick = onGoTasks,
+        )
         MaaCard {
             OutlinedTextField(
                 value = ui.logLevel,
@@ -125,21 +132,21 @@ fun SettingsScreen(
             )
         }
 
-        SectionHeader("后台保活")
+        SectionHeader("后台保活", icon = Icons.Filled.Lock)
         MaaCard {
             val ctx = LocalContext.current
             var ignoring by remember { mutableStateOf(KeepAlive.isIgnoringBatteryOptimizations(ctx)) }
             val running = ui.runningTask
 
-            InfoRow(
+            StatusRow(
                 "前台服务",
                 if (running) "运行中（已加锁）" else "未运行",
-                valueColor = if (running) OkColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                if (running) OkColor else MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            InfoRow(
+            StatusRow(
                 "电池优化",
                 if (ignoring) "已在白名单" else "未加入白名单",
-                valueColor = if (ignoring) OkColor else WarnColor,
+                if (ignoring) OkColor else WarnColor,
             )
             Text(
                 "任务运行时应用会启动前台服务并持有 WakeLock，防止系统冻结进程"
@@ -170,24 +177,13 @@ fun SettingsScreen(
             ) { Text("打开应用详情（关掉后台限制）") }
         }
 
-        SectionHeader("实时监看")
-        MaaCard(onClick = { onOpenMonitor() }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("打开监看画面", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "通过 Chrome DevTools Protocol 显示云游戏实时画面（需任务已在运行）",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        SectionHeader("实时监看", icon = Icons.Filled.Monitor)
+        NavRow(
+            icon = Icons.Filled.Monitor,
+            title = "打开监看画面",
+            subtitle = "通过 Chrome DevTools Protocol 显示云游戏实时画面（需任务已在运行）",
+            onClick = onOpenMonitor,
+        )
         MaaCard {
             OutlinedTextField(
                 value = ui.monitorPort.toString(),
@@ -208,7 +204,7 @@ fun SettingsScreen(
             )
         }
 
-        SectionHeader("外观")
+        SectionHeader("外观", icon = Icons.Filled.Palette)
         MaaCard {
             Text("主题模式", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)) {
@@ -245,12 +241,20 @@ fun SettingsScreen(
             }
         }
 
-        SectionHeader("运行时")
+        SectionHeader("运行时", icon = Icons.Filled.Build)
         MaaCard {
             InfoRow("版本", ui.version)
             InfoRow("设备架构", android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "未知")
-            InfoRow("运行时", if (ui.runtimeReady) "已安装" else "未安装")
-            InfoRow("容器", if (ui.deployed) ui.containerAlias else "未部署")
+            StatusRow(
+                "Termux 运行时",
+                if (ui.runtimeReady) "已安装" else "未安装",
+                if (ui.runtimeReady) OkColor else WarnColor,
+            )
+            StatusRow(
+                "容器",
+                if (ui.deployed) ui.containerAlias else "未部署",
+                if (ui.deployed) OkColor else WarnColor,
+            )
             InfoRow("安装路径", TermuxPaths.OFFICIAL_PREFIX)
 
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
@@ -262,21 +266,6 @@ fun SettingsScreen(
                 Spacer(Modifier.padding(horizontal = 4.dp))
                 Text("重置运行时", color = ErrColor)
             }
-        }
-
-        SectionHeader("关于")
-        MaaCard {
-            Text(
-                "MaaTermux 把 Termux 运行时直接内置进 APK：bootstrap 从 assets 解压，"
-                    + "容器由 proot-distro 在 App 自己的私有目录里运行，全程不依赖外部 Termux 应用。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "术语：\$PREFIX = ${TermuxPaths.OFFICIAL_PREFIX}，\$HOME = ${TermuxPaths.OFFICIAL_HOME}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
 
         Spacer(Modifier.height(MaaDesignTokens.Spacing.xxl))
