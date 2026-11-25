@@ -495,6 +495,12 @@ object DeployScripts {
         m["loop_mode"] = loopMode
         m["scheduled_time"] = "\"$scheduledTime\""
 
+        // 游戏内优化总开关：上游 game_option_enabled() 做的是
+        // `game_optimization_enable && auto_battle_detect_enable`，
+        // 这里固定为 true（与上游官方安卓版 FIXED_SETTINGS 一致）；
+        // 否则用户在界面打开「自动战斗 + 二倍速」也不会生效。
+        m["game_optimization_enable"] = "true"
+
         // 用户在设置页控制的开关
         toggles.forEach { (k, v) -> m[k] = v.toString() }
 

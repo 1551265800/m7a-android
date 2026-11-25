@@ -61,11 +61,6 @@ fun SettingsScreen(
     var showReset by remember { mutableStateOf(false) }
     var subScreen by rememberSaveable { mutableStateOf<String?>(null) }
 
-    if (subScreen == "toggles") {
-        TaskTogglesScreen(vm = vm, onBack = { subScreen = null })
-        return
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -93,22 +88,14 @@ fun SettingsScreen(
         }
 
         SectionHeader("任务")
-        MaaCard(onClick = { subScreen = "toggles" }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("任务开关", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "决定「完整运行」会执行哪几项（清体力 / 日常 / 领取奖励 / 活动 …）",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+        MaaCard {
+            Text("任务设置已合并到「任务」页", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "任务开关、清体力副本、领取奖励等设置现在和任务选择在同一页（「任务」标签 → 任务设置），" +
+                    "按分组折叠，改完直接点运行即可。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         MaaCard {
             OutlinedTextField(
@@ -132,7 +119,7 @@ fun SettingsScreen(
                 )
             }
             Text(
-                "调整任务开关或下面这些选项后，点「生成脚本」才会写入容器。",
+                "这些选项改动后会保存到本地；点「一键运行」时应用会自动把它们同步进容器。",
                 style = MaterialTheme.typography.bodySmall,
                 color = WarnColor,
             )

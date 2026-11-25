@@ -54,11 +54,13 @@ fun PowerInstanceCard(
     onNameChange: (String) -> Unit,
     onCountChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** 放进别的卡片里时传 false，避免卡片套卡片。 */
+    card: Boolean = true,
 ) {
     var typeDialog by remember { mutableStateOf(false) }
     var nameDialog by remember { mutableStateOf(false) }
 
-    MaaCard(modifier = modifier) {
+    val body: @Composable () -> Unit = {
         Text("清体力副本", style = MaterialTheme.typography.titleSmall)
         Text(
             "「清体力」和「例行任务 / 完整运行」里的刷本都用这里的选择。",
@@ -91,6 +93,12 @@ fun PowerInstanceCard(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
         }
+    }
+
+    if (card) {
+        MaaCard(modifier = modifier) { body() }
+    } else {
+        Column(modifier = modifier) { body() }
     }
 
     if (typeDialog) {

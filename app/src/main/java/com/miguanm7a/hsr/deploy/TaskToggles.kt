@@ -140,6 +140,12 @@ object TaskToggles {
 
         // ---------------- 自动剧情与战斗 ----------------
         TaskToggle(
+            "auto_battle_detect_enable", "自动战斗 + 二倍速",
+            "启动云游戏后自动开启游戏内自动战斗并把战斗速度切到二倍速；" +
+                "上游用 game_optimization_enable 与它做「与」判断，任一为假都不生效",
+            ToggleGroup.AUTOPLOT, true,
+        ),
+        TaskToggle(
             "autoplot_skip_enable", "自动跳过对话", "出现跳过按钮时自动点击",
             ToggleGroup.AUTOPLOT, true,
         ),
@@ -237,6 +243,12 @@ object TaskToggles {
             ToggleGroup.RUNTIME, false,
         ),
     )
+
+    /** 「自动战斗 + 二倍速」在 config.yaml 里的键名，界面提示用得到。 */
+    const val BATTLE_DETECT_KEY = "auto_battle_detect_enable"
+
+    /** 某一分组的全部开关，顺序与 [ALL] 一致。 */
+    fun forGroup(group: ToggleGroup): List<TaskToggle> = ALL.filter { it.group == group }
 
     private val BY_KEY = ALL.associateBy { it.key }
 

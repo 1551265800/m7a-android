@@ -22,6 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,8 +36,12 @@ import com.miguanm7a.hsr.deploy.M7aTask
 import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.components.LoginQrCard
 import com.miguanm7a.hsr.ui.components.MaaCard
+import com.miguanm7a.hsr.ui.components.ExpandableGroup
 import com.miguanm7a.hsr.ui.components.PowerInstanceCard
+import com.miguanm7a.hsr.ui.components.ToggleRow
 import com.miguanm7a.hsr.deploy.InstanceCatalog
+import com.miguanm7a.hsr.deploy.TaskToggles
+import com.miguanm7a.hsr.deploy.ToggleGroup
 import com.miguanm7a.hsr.ui.components.SectionHeader
 import com.miguanm7a.hsr.ui.theme.MaaDesignTokens
 import com.miguanm7a.hsr.ui.theme.WarnColor
@@ -46,6 +53,14 @@ fun TasksScreen(
 ) {
     val ui by vm.ui.collectAsState()
     val qr by vm.qr.collectAsState()
+    val toggles by vm.toggles.collectAsState()
+    val instanceName = ui.instanceName.ifEmpty { InstanceCatalog.defaultName(ui.instanceType) }
+    val instanceCount = ui.instanceCount.takeIf { it > 0 }
+        ?: InstanceCatalog.defaultCount(ui.instanceType)
+    var powerOpen by rememberSaveable { mutableStateOf(true) }
+    var rewardOpen by rememberSaveable { mutableStateOf(false) }
+    var dailyOpen by rememberSaveable { mutableStateOf(false) }
+    var plotOpen by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -84,7 +99,7 @@ fun TasksScreen(
                     Column(Modifier.weight(1f)) {
                         Text(task.label, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            task.arg?.let { "main.py $it" } ?: "main.py",
+                            taskBrief(task, ui.instanceType, instanceName, instanceCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -93,17 +108,90 @@ fun TasksScreen(
             }
         }
 
-        item { SectionHeader("清体力副本") }
+        item { SectionHeader("任务设置") }
         item {
-            PowerInstanceCard(
-                type = ui.instanceType,
-                name = ui.instanceName.ifEmpty { InstanceCatalog.defaultName(ui.instanceType) },
-                count = ui.instanceCount.takeIf { it > 0 }
-                    ?: InstanceCatalog.defaultCount(ui.instanceType),
-                onTypeChange = { vm.setInstanceType(it) },
-                onNameChange = { vm.setInstanceName(it) },
-                onCountChange = { vm.setInstanceCount(it) },
+            Text(
+                "以下设置对所有任务共用；选「完整运行」时，开关决定具体跑哪些环节，" +
+                    "选单项任务时只有策略类开关生效。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+
+        // ---- 清体力 ----
+        item {
+            ExpandableGroup(
+                title = "清体力",
+                summary = "${ui.instanceType} · $instanceName ×$instanceCount",
+                expanded = powerOpen,
+                onToggleExpand = { powerOpen = !powerOpen },
+            ) {
+                PowerInstanceCard(
+                    type = ui.instanceType,
+                    name = instanceName,
+                    count = instanceCount,
+                    onTypeChange = { vm.setInstanceType(it) },
+                    onNameChange = { vm.setInstanceName(it) },
+                    onCountChange = { vm.setInstanceCount(it) },
+                    card = false,
+                )
+                if (toggles[TaskToggles.BATTLE_DETECT_KEY] == false) {
+                    Text(
+                        "「自动战斗 + 二倍速」当前关闭，进副本后不会自动开二倍速。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WarnColor,
+                    )
+                }
+                TaskToggles.forGroup(ToggleGroup.POWER).forEach { t ->
+                    ToggleRow(t, checked = toggles[t.key] ?: t.defaultValue) { v -> vm.setToggle(t.key, v) }
+                }
+            }
+        }
+
+        // ---- 领取奖励 ----
+        item {
+            ExpandableGroup(
+                title = "领取奖励",
+                summary = groupSummary(ToggleGroup.REWARD, toggles),
+                expanded = rewardOpen,
+                onToggleExpand = { rewardOpen = !rewardOpen },
+            ) {
+                TaskToggles.forGroup(ToggleGroup.REWARD).forEach { t ->
+                    ToggleRow(t, checked = toggles[t.key] ?: t.defaultValue) { v -> vm.setToggle(t.key, v) }
+                }
+            }
+        }
+
+        // ---- 日常与活动 ----
+        item {
+            ExpandableGroup(
+                title = "日常与活动",
+                summary = groupSummary(ToggleGroup.DAILY, toggles) +
+                    " ／ " + groupSummary(ToggleGroup.ACTIVITY, toggles),
+                expanded = dailyOpen,
+                onToggleExpand = { dailyOpen = !dailyOpen },
+            ) {
+                (TaskToggles.forGroup(ToggleGroup.DAILY) + TaskToggles.forGroup(ToggleGroup.ACTIVITY))
+                    .forEach { t ->
+                        ToggleRow(t, checked = toggles[t.key] ?: t.defaultValue) { v -> vm.setToggle(t.key, v) }
+                    }
+            }
+        }
+
+        // ---- 剧情与运行 ----
+        item {
+            ExpandableGroup(
+                title = "剧情与运行",
+                summary = groupSummary(ToggleGroup.AUTOPLOT, toggles) +
+                    " ／ " + groupSummary(ToggleGroup.RUNTIME, toggles),
+                expanded = plotOpen,
+                onToggleExpand = { plotOpen = !plotOpen },
+            ) {
+                (TaskToggles.forGroup(ToggleGroup.AUTOPLOT) + TaskToggles.forGroup(ToggleGroup.RUNTIME))
+                    .forEach { t ->
+                        ToggleRow(t, checked = toggles[t.key] ?: t.defaultValue) { v -> vm.setToggle(t.key, v) }
+                    }
+            }
         }
 
         item { SectionHeader("完成后行为") }
@@ -229,4 +317,25 @@ fun TasksScreen(
             }
         }
     }
+}
+
+/** 任务卡片上的摘要：让用户不用展开设置就知道这一项会做什么。 */
+private fun taskBrief(
+    task: M7aTask,
+    instanceType: String,
+    instanceName: String,
+    instanceCount: Int,
+): String = when (task) {
+    M7aTask.FULL -> "按「任务设置」里的开关执行全部环节"
+    M7aTask.ROUTINE -> "日常准备 → 日常领奖 → 每日实训"
+    M7aTask.POWER -> "$instanceType · $instanceName ×$instanceCount"
+    M7aTask.DAILY -> "补做未完成的每日实训并领取活跃度奖励"
+    else -> task.arg?.let { "main.py $it" } ?: "main.py"
+}
+
+/** 分组摘要：显示「已启用 N / M」，收起来也能看出状态。 */
+private fun groupSummary(group: ToggleGroup, values: Map<String, Boolean>): String {
+    val items = TaskToggles.forGroup(group)
+    val on = items.count { values[it.key] ?: it.defaultValue }
+    return "${group.label} 已启用 $on/${items.size}"
 }
