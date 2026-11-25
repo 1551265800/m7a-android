@@ -1,0 +1,28 @@
+*.iml
+.gradle/
+.idea/
+.kotlin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# 生成的大资产（按 README 第五节可复现地重新生成）
+# 两个文件合计约 537MB，不应进版本库。
+app/src/main/assets/bootstrap/termux-bootstrap.zip
+app/src/main/assets/rootfs/m7a-rootfs.bin
+
+# Python 脚本的字节码缓存
+__pycache__/
+
+# 生成 bootstrap 的中间产物（基础 bootstrap zip），同样不进版本库
+/build-assets/
+
+# 发布签名文件与密码，绝不入库
+m7a-release.jks
+keystore.properties
