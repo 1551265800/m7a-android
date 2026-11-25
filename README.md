@@ -8,8 +8,8 @@
 
 > ⚠️ **本项目是非官方的社区安卓封装，与上游 [March7thAssistant](https://github.com/moesnow/March7thAssistant) 项目及其作者没有隶属关系。**
 > 应用显示名称与上游相同，但它只做**打包 + 图形化**，不修改任何自动化逻辑。
-> 自动化逻辑本身的问题请反馈给上游；**安装、部署、界面相关的问题请反馈到本仓库(如果有精力我也会尝试打个补丁）**。
-> **上游原仓库已声明废弃并迁移到 `March7thAssistantAndroidlocal`。本仓库是在其代码基础上继续维护的分支，当前版本 `1.0.4`，APK 见 [Releases](https://github.com/1551265800/m7a-android/releases/latest)。**
+> 自动化逻辑本身的问题请反馈给上游；安装、部署、界面相关的问题请反馈到本仓库。
+> 本仓库是在上游代码基础上继续维护的分支，当前版本 `1.0.4`，APK 见 [Releases](https://github.com/1551265800/m7a-android/releases/latest)。
 [![Release](https://img.shields.io/github/v/release/1551265800/m7a-android?style=flat-square&label=Release)](https://github.com/1551265800/m7a-android/releases/latest)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Android-7.0%2B-3ddc84?style=flat-square&logo=android)](https://www.android.com/)
