@@ -113,6 +113,15 @@ android {
         // zip：bootstrap 压缩包；bin：526MB 的 rootfs（本身已是 gzip，
         // 再 deflate 只会白白多花几分钟，且 RootfsInstaller 用 openFd 取长度会失败）。
         noCompress += listOf("zip", "bin")
+
+        // ---------- 调试瘦包 ----------
+        // 构建时加 -Pslim 会跳过两个运行时资产（合计约 565MB），
+        // APK 从 579MB 降到约 21MB，adb install 从几十秒降到 2 秒左右。
+        // 只调界面时用这个，循环能从约 2 分钟压到 40 秒内。
+        // 注意：瘦包不含资产，点「部署 / 重置运行时」必然失败，只适合看界面和导航。
+        if (project.hasProperty("slim")) {
+            ignoreAssetsPattern = "!m7a-rootfs.bin:!termux-bootstrap.zip"
+        }
     }
 
     packaging {
