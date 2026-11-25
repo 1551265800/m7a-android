@@ -25,6 +25,7 @@ class DeploySettings(private val context: Context) {
         val RUN_DAILY_TIME = stringPreferencesKey("run_daily_time")
         val LOOP_MODE = stringPreferencesKey("loop_mode")
         val MONITOR_PORT = stringPreferencesKey("monitor_port")
+        val INSTANCE_TYPE = stringPreferencesKey("instance_type")
         val USE_PAID_TIME = booleanPreferencesKey("use_paid_time")
         val DEPLOYED = booleanPreferencesKey("deployed")
         val ACCENT_THEME = stringPreferencesKey("accent_theme")
@@ -108,6 +109,50 @@ class DeploySettings(private val context: Context) {
         read(Keys.MONITOR_PORT, "9222").toIntOrNull()?.coerceIn(1, 65535) ?: 9222
 
     fun setMonitorPort(v: Int) = write(Keys.MONITOR_PORT, v.coerceIn(1, 65535).toString())
+
+    // --- 清体力副本 ---
+
+    /** 选中的副本类型，必须是 [InstanceCatalog] 里存在的；否则回落默认。 */
+    fun instanceType(): String =
+        read(Keys.INSTANCE_TYPE, InstanceCatalog.defaultType())
+            .takeIf { InstanceCatalog.type(it) != null }
+            ?: InstanceCatalog.defaultType()
+
+    fun setInstanceType(v: String) {
+        if (InstanceCatalog.type(v) != null) write(Keys.INSTANCE_TYPE, v)
+    }
+
+    /**
+     * 某个副本类型下选中的具体关卡名。
+     *
+     * 按类型分别记住：切回「拟造花萼（金）」时，之前选过的「以太之蕾」还在，
+     * 不会因为切到别的类型就丢。
+     */
+    fun instanceName(type: String): String {
+        val saved = read(stringPreferencesKey("instance_name_$type"), "")
+        return saved.takeIf { it.isNotEmpty() && it in InstanceCatalog.names(type) }
+            ?: InstanceCatalog.defaultName(type)
+    }
+
+    fun setInstanceName(type: String, name: String) {
+        if (name in InstanceCatalog.names(type)) write(stringPreferencesKey("instance_name_$type"), name)
+    }
+
+    /** 连续挑战次数（上游 `instance_names_challenge_count`）。 */
+    fun challengeCount(type: String): Int =
+        read(stringPreferencesKey("instance_count_$type"), "").toIntOrNull()?.coerceIn(1, 99)
+            ?: InstanceCatalog.defaultCount(type)
+
+    fun setChallengeCount(type: String, value: Int) =
+        write(stringPreferencesKey("instance_count_$type"), value.coerceIn(1, 99).toString())
+
+    /** 全部类型的关卡名映射，写 config.yaml 时用。 */
+    fun instanceNames(): Map<String, String> =
+        InstanceCatalog.TYPES.associate { it.name to instanceName(it.name) }
+
+    /** 全部类型的挑战次数映射，写 config.yaml 时用。 */
+    fun instanceCounts(): Map<String, Int> =
+        InstanceCatalog.TYPES.associate { it.name to challengeCount(it.name) }
 
     // --- 任务开关（config.yaml 里的 *_enable 等）---
 

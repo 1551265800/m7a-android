@@ -8,6 +8,7 @@ import com.miguanm7a.hsr.deploy.AfterFinish
 import com.miguanm7a.hsr.deploy.DeployEngine
 import com.miguanm7a.hsr.deploy.DeployScripts
 import com.miguanm7a.hsr.deploy.DeploySettings
+import com.miguanm7a.hsr.deploy.InstanceCatalog
 import com.miguanm7a.hsr.deploy.M7aTask
 import com.miguanm7a.hsr.deploy.ConfigSync
 import com.miguanm7a.hsr.deploy.RootfsInstaller
@@ -51,8 +52,20 @@ data class UiState(
     val loopMode: String = "scheduled",
     val usePaidTime: Boolean = false,
     val monitorPort: Int = 9222,
+    /** 清体力：当前副本类型、该类型下选中的关卡、连续挑战次数。 */
+    val instanceType: String = InstanceCatalog.defaultType(),
+    val instanceName: String = "",
+    val instanceCount: Int = 0,
     val version: String = "",
 )
+
+/**
+ * 判定「二维码属于本轮任务」时允许的时间回差。
+ *
+ * 上游可能在任务启动后几百毫秒内就写出二维码，而这里是按文件 mtime 与
+ * 任务启动时间比较，留 5 秒余量避免误判成上一轮残留。
+ */
+private const val QR_START_TOLERANCE_MS = 5_000L
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -71,11 +84,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private var qrWatchJob: Job? = null
 
+    /**
+     * 本轮任务开始的时间戳（毫秒）。
+     *
+     * 用来判断二维码是不是**这一轮**生成的：上游登录成功后会保留
+     * `logs/qrcode_login.png` 不删，如果只按 mtime 比对，下次运行或从后台
+     * 回到前台时会把上一次的过期二维码又显示出来。
+     */
+    private var qrTaskStartMs: Long = 0L
+
     init {        // 观察任务输出与状态。任务进程归 TaskRunner 所有，
         // 所以 ViewModel 重建后重新接上即可，不会丢任务。
         viewModelScope.launch {
             TaskRunner.lines.collect { line ->
                 appendLog(line, LogParsing.detectLevel(line))
+                if (isLoginDoneLine(line)) {
+                    // 已经扫码/登录成功：立刻收起二维码，避免继续显示旧图
+                    clearQr()
+                }
             }
         }
         viewModelScope.launch {
@@ -85,8 +111,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(runningTask = snap.running, runningTaskName = snap.label)
                 }
                 if (wasRunning && !snap.running) {
-                    // 任务结束
+                    // 任务结束：二维码一律收起，避免残留上一轮的过期图片
                     stopQrWatch()
+                    clearQr()
                     appendLog(
                         "任务已结束（退出码 ${snap.lastExitCode ?: "?"}）",
                         if (snap.lastExitCode == 0) LogLevel.OK else LogLevel.WARN,
@@ -145,6 +172,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 loopMode = settings.loopMode(),
                 usePaidTime = settings.usePaidTime(),
                 monitorPort = settings.monitorPort(),
+                instanceType = settings.instanceType(),
+                instanceName = settings.instanceName(settings.instanceType()),
+                instanceCount = settings.challengeCount(settings.instanceType()),
                 version = com.miguanm7a.hsr.BuildConfig.VERSION_NAME,
             )
         }
@@ -201,11 +231,54 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** 一键运行选中的任务。 */
     fun runSelectedTask() {
         val app = getApplication<Application>()
-        val current = _ui.value
         if (TaskRunner.isRunning()) {
             appendLog("已有任务在运行中，请先停止", LogLevel.WARN)
             return
         }
+        // 配置同步要起一次 proot，放到后台做，避免卡住界面。
+        // 同步的是「界面上的最新开关 / 副本设置」，否则用户改了设置直接点运行
+        // 仍然会跑容器里的旧配置。
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                runCatching { syncConfigBeforeRun(app) }
+                    .onFailure { appendLog("同步配置失败，本次使用容器内现有配置：${it.message}", LogLevel.WARN) }
+            }
+            launchSelectedTask(app)
+        }
+    }
+
+    /** 把当前设置写进 config.yaml 并推回容器；未部署时直接跳过。 */
+    private fun syncConfigBeforeRun(app: Application) {
+        val cur = _ui.value
+        if (!cur.deployed || !cur.runtimeReady) {
+            appendLog("尚未完成部署，跳过配置同步", LogLevel.INFO)
+            return
+        }
+        val bundled = settings.isBundled()
+        val prootEnv = DeployScripts.readProotEnvExtra(TermuxPaths.homeDir(app))
+        val guest = ConfigSync.refresh(
+            context = app,
+            settings = settings,
+            bundled = bundled,
+            alias = cur.containerAlias,
+            onLog = { appendLog(it) },
+            extraEnv = prootEnv,
+        )
+        val code = ConfigSync.push(
+            context = app,
+            alias = cur.containerAlias,
+            guestSharedConfig = guest,
+            bundled = bundled,
+            onLog = { appendLog(it) },
+            extraEnv = prootEnv,
+        )
+        if (code != 0) {
+            appendLog("配置推回容器失败（退出码 $code），本次将使用容器内旧配置", LogLevel.WARN)
+        }
+    }
+
+    private fun launchSelectedTask(app: Application) {
+        val current = _ui.value
         val cmd = DeployScripts.runTaskCommand(
             alias = current.containerAlias,
             task = current.task,
@@ -236,6 +309,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         // 任务进程归 TaskRunner（单例）所有，这样 ViewModel/Activity 被回收
         // 也不会杀掉正在跑的任务。
+        qrTaskStartMs = System.currentTimeMillis()
+        clearQr()
         if (!TaskRunner.start(app, cmd, label, prootEnv)) {
             appendLog("任务启动失败", LogLevel.ERROR)
             return
@@ -260,15 +335,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun startQrWatch() {
         qrWatchJob?.cancel()
         val app = getApplication<Application>()
+        // 进程被杀后重建 ViewModel 时 qrTaskStartMs 会归零，用 TaskRunner 记录的
+        // 启动时间兜底，保证「只显示本轮生成的二维码」这个判断始终成立。
+        val startMs = qrTaskStartMs.takeIf { it > 0 } ?: TaskRunner.state.value.startedAt
         qrWatchJob = viewModelScope.launch(Dispatchers.IO) {
             val f = SharedPaths.qrFile(app)
             appendLog("等待登录二维码（首次运行需要米游社 App 扫码）…", LogLevel.INFO)
             while (isActive) {
-                val info = if (f.isFile && f.length() > 0) {
-                    QrInfo(f, f.lastModified(), f.length())
-                } else {
-                    null
-                }
+                // 只认本轮任务开始之后写出的文件：登录成功后上游不会删二维码，
+                // 旧文件会被误当成「还在等扫码」。
+                val fresh = f.isFile && f.length() > 0 && f.lastModified() >= startMs - QR_START_TOLERANCE_MS
+                val info = if (fresh) QrInfo(f, f.lastModified(), f.length()) else null
                 if (info?.revision != _qr.value?.revision) {
                     _qr.value = info
                     if (info != null) {
@@ -296,19 +373,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** 手动重新读取二维码文件（任务不在跑、轮询停掉时用）。 */
     fun rescanQr() {
         val app = getApplication<Application>()
+        val startMs = qrTaskStartMs.takeIf { it > 0 } ?: TaskRunner.state.value.startedAt
         viewModelScope.launch(Dispatchers.IO) {
             val f = SharedPaths.qrFile(app)
-            val info = if (f.isFile && f.length() > 0) QrInfo(f, f.lastModified(), f.length()) else null
+            val fresh = f.isFile && f.length() > 0 && f.lastModified() >= startMs - QR_START_TOLERANCE_MS
+            val info = if (fresh) QrInfo(f, f.lastModified(), f.length()) else null
             _qr.value = info
             withContext(Dispatchers.Main) {
                 appendLog(
-                    if (info == null) "未找到登录二维码（${f.absolutePath}）"
-                    else "已读取登录二维码：${f.name}（${info.size} 字节）",
+                    when {
+                        info != null -> "已读取登录二维码：${f.name}（${info.size} 字节）"
+                        f.isFile -> "没有新的二维码（当前文件是上一轮残留，可能已登录成功）"
+                        else -> "未找到登录二维码（${f.absolutePath}）"
+                    },
                     if (info == null) LogLevel.WARN else LogLevel.OK,
                 )
             }
         }
     }
+
+    /**
+     * 上游在扫码、确认登录这两个环节会打印固定文案：
+     *   - `扫码成功！请在手机上点击【确认登录】`
+     *   - `检测到登录成功` / `登录完成，将重启为无窗口模式`
+     * 命中任意一条就说明二维码已经用完，界面应当收起。
+     */
+    private fun isLoginDoneLine(line: String): Boolean =
+        line.contains("扫码成功") ||
+            line.contains("检测到登录成功") ||
+            line.contains("登录完成")
 
     fun stopTask() {
         if (!TaskRunner.isRunning()) {
@@ -339,6 +432,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTask(v: M7aTask) {
         settings.setTask(v); _ui.update { it.copy(task = v) }
+    }
+
+    // --- 清体力副本 ---
+
+    fun setInstanceType(type: String) {
+        settings.setInstanceType(type)
+        refreshInstance()
+    }
+
+    fun setInstanceName(name: String) {
+        val type = settings.instanceType()
+        settings.setInstanceName(type, name)
+        refreshInstance()
+    }
+
+    fun setInstanceCount(count: Int) {
+        settings.setChallengeCount(settings.instanceType(), count)
+        refreshInstance()
+    }
+
+    private fun refreshInstance() {
+        val type = settings.instanceType()
+        _ui.update {
+            it.copy(
+                instanceType = type,
+                instanceName = settings.instanceName(type),
+                instanceCount = settings.challengeCount(type),
+            )
+        }
     }
 
     fun setAfterFinish(v: AfterFinish) {

@@ -63,7 +63,7 @@ object ConfigSync {
         }
 
         // 2) 只改我们管理的键
-        val patched = ConfigPatcher.upsertTopLevel(
+        var patched = ConfigPatcher.upsertTopLevel(
             base,
             DeployScripts.configScalars(
                 afterFinish = settings.afterFinish(),
@@ -72,9 +72,19 @@ object ConfigSync {
                 logLevel = settings.logLevel(),
                 usePaidTime = settings.usePaidTime(),
                 toggles = settings.allToggles(),
+                instanceType = settings.instanceType(),
                 debugPort = settings.monitorPort(),
             ),
         )
+
+        // 2.1) 副本名与次数是跨行的块状映射，单行替换会留下旧子项，单独处理
+        patched = ConfigPatcher.upsertNestedMapping(patched, "instance_names", settings.instanceNames())
+        patched = ConfigPatcher.upsertNestedMapping(
+            patched,
+            "instance_names_challenge_count",
+            settings.instanceCounts().mapValues { it.value.toString() },
+        )
+
         sharedFile.writeText(patched, Charsets.UTF_8)
         onLog("    配置已更新（${patched.length} 字节，增量写入 ${TaskToggles.ALL.size} 个开关）")
         return guestShared

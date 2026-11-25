@@ -33,6 +33,8 @@ import com.miguanm7a.hsr.deploy.M7aTask
 import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.components.LoginQrCard
 import com.miguanm7a.hsr.ui.components.MaaCard
+import com.miguanm7a.hsr.ui.components.PowerInstanceCard
+import com.miguanm7a.hsr.deploy.InstanceCatalog
 import com.miguanm7a.hsr.ui.components.SectionHeader
 import com.miguanm7a.hsr.ui.theme.MaaDesignTokens
 import com.miguanm7a.hsr.ui.theme.WarnColor
@@ -89,6 +91,19 @@ fun TasksScreen(
                     }
                 }
             }
+        }
+
+        item { SectionHeader("清体力副本") }
+        item {
+            PowerInstanceCard(
+                type = ui.instanceType,
+                name = ui.instanceName.ifEmpty { InstanceCatalog.defaultName(ui.instanceType) },
+                count = ui.instanceCount.takeIf { it > 0 }
+                    ?: InstanceCatalog.defaultCount(ui.instanceType),
+                onTypeChange = { vm.setInstanceType(it) },
+                onNameChange = { vm.setInstanceName(it) },
+                onCountChange = { vm.setInstanceCount(it) },
+            )
         }
 
         item { SectionHeader("完成后行为") }

@@ -78,6 +78,61 @@ object ConfigPatcher {
     }
 
     /**
+     * 更新一个**块状映射**，形如：
+     *
+     * ```yaml
+     * instance_names:
+     *   拟造花萼（金）: 回忆之蕾
+     *   侵蚀隧洞: 睿治之径
+     * ```
+     *
+     * [upsertTopLevel] 只替换单行，遇到这种跨行的块会把旧子项留在文件里，
+     * 拼出非法 YAML（或让上游读到旧值），所以单独处理：
+     * 写完新的 `key:` + 子项后，把紧跟其后的缩进行 / `- ` 行整段丢掉。
+     *
+     * @param entries 子键 -> 已格式化好的 YAML 标量（注意中文键可以直接写）
+     */
+    fun upsertNestedMapping(yaml: String, key: String, entries: Map<String, String>): String {
+        if (entries.isEmpty()) return yaml
+
+        val header = Regex("^$key\\s*:(.*)$")
+        val lines = yaml.split("\n")
+        val out = ArrayList<String>(lines.size + entries.size + 2)
+        var i = 0
+        var replaced = false
+
+        while (i < lines.size) {
+            val raw = lines[i]
+            if (header.matches(raw)) {
+                out.add("$key:")
+                entries.forEach { (k, v) -> out.add("  $k: $v") }
+                replaced = true
+                i++
+                // 丢弃旧块：缩进行、制表符行、以及列首的 "- " 列表项
+                while (i < lines.size) {
+                    val l = lines[i]
+                    val belongs = l.isBlank() || l.startsWith(" ") || l.startsWith("\t") || l.startsWith("- ")
+                    if (!belongs) break
+                    i++
+                }
+                continue
+            }
+            out.add(raw)
+            i++
+        }
+
+        if (!replaced) {
+            while (out.isNotEmpty() && out.last().isBlank()) out.removeAt(out.size - 1)
+            out.add("")
+            out.add("$key:")
+            entries.forEach { (k, v) -> out.add("  $k: $v") }
+        }
+
+        val text = out.joinToString("\n")
+        return if (text.endsWith("\n")) text else "$text\n"
+    }
+
+    /**
      * 取出行尾注释（` # ...`），没有则返回空串。
      *
      * 前提：我们写入的标量本身不含 ` #`，所以按第一个 ` #` 切分是安全的。

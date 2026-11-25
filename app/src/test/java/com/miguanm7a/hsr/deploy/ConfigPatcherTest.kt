@@ -153,4 +153,73 @@ class ConfigPatcherTest {
         )
         assertEquals(yaml, out)
     }
+
+    // ------------------------------------------------------------------
+    // 块状映射：清体力副本（instance_names / instance_names_challenge_count）
+    // ------------------------------------------------------------------
+
+    /** 模拟运行过一轮后的配置：两个块状映射 + 后面的顶层键。 */
+    private val instanceConfig = """
+        instance_type: 拟造花萼（金）
+        instance_names:
+          拟造花萼（金）: 回忆之蕾
+          凝滞虚影: 无
+        instance_names_challenge_count:
+          拟造花萼（金）: 24
+          凝滞虚影: 8
+        tp_before_instance: false
+    """.trimIndent() + "\n"
+
+    @Test
+    fun `nested mapping replaces the whole block`() {
+        val out = ConfigPatcher.upsertNestedMapping(
+            instanceConfig,
+            "instance_names",
+            linkedMapOf("拟造花萼（金）" to "以太之蕾", "侵蚀隧洞" to "睿治之径"),
+        )
+        assertTrue("新值应写入", out.contains("  拟造花萼（金）: 以太之蕾"))
+        assertTrue(out.contains("  侵蚀隧洞: 睿治之径"))
+        assertFalse("旧子项必须被丢弃", out.contains("凝滞虚影: 无"))
+        assertTrue("兄弟块不能被误删", out.contains("  凝滞虚影: 8"))
+        assertTrue("后面的顶层键必须保留", out.contains("tp_before_instance: false"))
+        assertTrue("头部注释/前序键不变", out.contains("instance_type: 拟造花萼（金）"))
+    }
+
+    @Test
+    fun `nested mapping is appended when the key is absent`() {
+        val out = ConfigPatcher.upsertNestedMapping(
+            "log_level: INFO\n",
+            "instance_names",
+            linkedMapOf("侵蚀隧洞" to "睿治之径"),
+        )
+        assertTrue(out.contains("instance_names:"))
+        assertTrue(out.contains("  侵蚀隧洞: 睿治之径"))
+        assertTrue("原有键不变", out.contains("log_level: INFO"))
+        assertTrue("应以换行结尾", out.endsWith("\n"))
+    }
+
+    /** 上游模板里可能是 `instance_names: {}` 这种同行写法，也要能替换。 */
+    @Test
+    fun `inline block value is replaced`() {
+        val out = ConfigPatcher.upsertNestedMapping(
+            "instance_names: {}\nfoo: 1\n",
+            "instance_names",
+            linkedMapOf("a" to "b"),
+        )
+        assertTrue(out.contains("instance_names:\n  a: b"))
+        assertFalse("同行旧值不能残留", out.contains("instance_names: {}"))
+        assertTrue(out.contains("foo: 1"))
+    }
+
+    /** 副本目录本身的自洽性：默认关卡必须在该类型的可选列表里。 */
+    @Test
+    fun `instance catalog defaults are consistent`() {
+        assertTrue(InstanceCatalog.TYPES.isNotEmpty())
+        for (t in InstanceCatalog.TYPES) {
+            assertTrue("${t.name} 的默认关卡不在列表里", t.defaultName in t.names)
+            assertTrue("${t.name} 的默认次数必须为正", t.defaultCount > 0)
+            assertTrue("${t.name} 至少要有两个选项", t.names.size >= 2)
+        }
+        assertEquals(InstanceCatalog.TYPES.first().name, InstanceCatalog.defaultType())
+    }
 }

@@ -460,6 +460,7 @@ object DeployScripts {
         logLevel: String,
         usePaidTime: Boolean,
         toggles: Map<String, Boolean>,
+        instanceType: String = InstanceCatalog.defaultType(),
         debugPort: Int = 9222,
     ): Map<String, String> {
         val m = LinkedHashMap<String, String>()
@@ -486,6 +487,9 @@ object DeployScripts {
         m["browser_download_use_mirror"] = "true"
         // 实时监看要靠这个端口连 CDP；固定下来便于 App 侧探测
         m["browser_debug_port"] = debugPort.toString()
+
+        // 清体力：副本类型（具体关卡名与次数是块状映射，由 ConfigPatcher 单独写入）
+        m["instance_type"] = instanceType
 
         // 定时（上游真实键名）
         m["loop_mode"] = loopMode

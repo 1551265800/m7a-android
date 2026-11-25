@@ -157,6 +157,72 @@ object TaskToggles {
             ToggleGroup.AUTOPLOT, true,
         ),
 
+        // ---------------- 清体力（补充项） ----------------
+        TaskToggle(
+            "tp_before_instance", "进本前先传送",
+            "进入副本前先传送到任意锚点，可减少「副本入口未解锁」类失败",
+            ToggleGroup.POWER, false,
+        ),
+        TaskToggle(
+            "relic_bag_cleanup_enable", "遗器满包自动分解",
+            "刷副本遇到遗器背包满时，自动分解可清理的低星遗器",
+            ToggleGroup.POWER, false,
+        ),
+        TaskToggle(
+            "borrow_character_enable", "强制使用支援角色",
+            "开启后每场战斗都借用支援角色，而不是有就用",
+            ToggleGroup.POWER, false,
+        ),
+        TaskToggle(
+            "prefer_fuel_tickets", "优先用助燃券",
+            "先用助燃券快速刷花萼 / 凝滞虚影（上游实验功能）",
+            ToggleGroup.POWER, false,
+        ),
+        TaskToggle(
+            "power_plan_continue", "计划完成后刷默认副本",
+            "整份体力计划执行完后，用剩余体力继续刷当前选中副本",
+            ToggleGroup.POWER, true,
+        ),
+        TaskToggle(
+            "power_plan_keep", "执行后保留体力计划",
+            "关闭时按剩余次数更新并删除已完成的计划条目",
+            ToggleGroup.POWER, false,
+        ),
+
+        // ---------------- 活动 ----------------
+        TaskToggle(
+            "activity_gardenofplenty_enable", "花藏繁生活动",
+            "活动期间自动完成花藏繁生的关卡",
+            ToggleGroup.ACTIVITY, false,
+        ),
+        TaskToggle(
+            "activity_planarfissure_enable", "位面分裂活动",
+            "活动期间自动完成位面分裂",
+            ToggleGroup.ACTIVITY, false,
+        ),
+        TaskToggle(
+            "activity_realmofthestrange_enable", "异器盈界活动",
+            "活动期间自动完成异器盈界",
+            ToggleGroup.ACTIVITY, false,
+        ),
+
+        // ---------------- 自动剧情与战斗（补充项） ----------------
+        TaskToggle(
+            "autoplot_enable", "自动对话总开关",
+            "配合「记住自动对话状态」使用，记录上一次的开关状态",
+            ToggleGroup.AUTOPLOT, false,
+        ),
+        TaskToggle(
+            "autoplot_hero_chronicle_enable", "自动读英雄纪",
+            "自动阅读「如我所书」中的翁法罗斯英雄纪",
+            ToggleGroup.AUTOPLOT, false,
+        ),
+        TaskToggle(
+            "autoplot_remember_enable", "记住自动对话状态",
+            "下次启动时恢复上次的自动对话开关，可能增加后台资源占用",
+            ToggleGroup.AUTOPLOT, false,
+        ),
+
         // ---------------- 运行行为 ----------------
         TaskToggle(
             "check_update", "启动时检查更新", "检查 March7thAssistant 自身更新",
